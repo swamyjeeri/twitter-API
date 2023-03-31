@@ -57,28 +57,29 @@ const authenticateToken = (request, response, next) => {
   }
 };
 
-app.post("/register/", async (request, response) => {
-  const { username, name, password, gender, location } = request.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const selectUserQuery = `SELECT * FROM user WHERE username = '${username}'`;
+app.post("/register", async (request, response) => {
+  const { username, password, name, gender } = request.body;
+  const selectUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
+  console.log(username, password, name, gender);
   const dbUser = await db.get(selectUserQuery);
   if (dbUser === undefined) {
-    const createUserQuery = `
-      INSERT INTO 
-        user (username, name, password, gender, location) 
-      VALUES 
-        (
-          '${username}', 
-          '${name}',
-          '${hashedPassword}', 
-          '${gender}',
-          '${location}'
-        )`;
-    if (password.length < 5) {
+    if (password.length < 6) {
       response.status(400);
       response.send("Password is too short");
     } else {
-      let newUserDetails = await db.run(createUserQuery);
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const createUserQuery = `
+            INSERT INTO 
+                user ( name, username, password, gender)
+            VALUES(
+                '${name}',
+                '${username}',
+                '${hashedPassword}',
+                '${gender}'
+            )    
+         ;`;
+
+      await db.run(createUserQuery);
       response.status(200);
       response.send("User created successfully");
     }
@@ -148,7 +149,7 @@ app.get("/user/following", authenticateToken, async (request, response) => {
   response.send(userFollowsArray);
 });
 
-app.get("/user/following", authenticateToken, async (request, response) => {
+app.get("/user/followers", authenticateToken, async (request, response) => {
   const { payload } = request;
   const { user_id, name, username, gender } = payload;
   console.log(name);
@@ -161,8 +162,8 @@ app.get("/user/following", authenticateToken, async (request, response) => {
             follower.following_user_id = ${user_id}    
         ;`;
 
-  const userFollowsArray = await db.all(userFollowersQuery);
-  response.send(userFollowsArray);
+  const userFollowersArray = await db.all(userFollowersQuery);
+  response.send(userFollowersArray);
 });
 
 app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
